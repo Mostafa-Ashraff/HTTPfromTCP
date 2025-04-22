@@ -17,30 +17,47 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not open %s: %s \n", inputFilePath, err)
 	}
-	defer f.Close()
-	bytes8 := make([]byte, 8, 8)
-	var line string
+	c := getLinesChannel(f)
+	for i := range c {
+		fmt.Printf("read %s\n", i)
+
+	}
 	// var noOfLines = 0
+	// defer f.Close()
+
+}
+
+func getLinesChannel(f io.ReadCloser) chan string {
+	c := make(chan string)
+	var line string
+	bytes8 := make([]byte, 8, 8)
 	currentLine := 0
 	var parts []string
-	for {
-		n, err := f.Read(bytes8)
-		if err != nil {
-			if errors.Is(err, io.EOF) {
+	go func() {
+		defer f.Close()
+		defer close(c)
+		for {
+			n, err := f.Read(bytes8)
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					// c <- parts[currentLine]
+					break
+				}
+				fmt.Printf("error: %s \n", err.Error())
 				break
 			}
-			fmt.Printf("error: %s \n", err.Error())
-			break
+			str := string(bytes8[:n])
+			line += str
+			parts = strings.Split(line, "\n")
+			if len(parts)-1 > currentLine {
+				// fmt.Printf("read :%v\n", parts)
+				// fmt.Printf("read :%s\n", parts[currentLine])
+				c <- parts[currentLine]
+				currentLine += 1
+			}
 		}
-		str := string(bytes8[:n])
-		line += str
-		parts = strings.Split(line, "\n")
-		if len(parts)-1 > currentLine {
-			// fmt.Printf("read :%v\n", parts)
-			fmt.Printf("read :%s\n", parts[currentLine])
-			currentLine += 1
-		}
-	}
-	fmt.Printf("read :%s\n", parts[currentLine])
+		c <- parts[currentLine]
 
+	}()
+	return c
 }
