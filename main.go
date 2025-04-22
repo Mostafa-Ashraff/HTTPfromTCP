@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"net"
 	"os"
 	"strings"
 )
@@ -13,11 +13,23 @@ const inputFilePath = "messages.txt"
 
 func main() {
 	// fmt.Println("I hope i get the job")
-	f, err := os.Open(inputFilePath)
+	listener, err := net.Listen("tcp", ":42069")
 	if err != nil {
-		log.Fatalf("could not open %s: %s \n", inputFilePath, err)
+		fmt.Println("Error setting up listener:", err)
+		os.Exit(1)
 	}
-	c := getLinesChannel(f)
+	defer listener.Close() // Ensure listener is closed on program exit
+
+	fmt.Println("TCP listener is running on :42069")
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			fmt.Println("Error accepting connection:", err)
+			continue
+		}
+		go handleConnection(conn) //
+	}
+	c := getLinesChannel()
 	for i := range c {
 		fmt.Printf("read %s\n", i)
 
